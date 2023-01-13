@@ -1,19 +1,17 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PostModule } from './post/post.module';
-import { PrismaService } from './prisma/prisma.service';
-import { Res1Module } from './res1/res1.module';
-import { UserModule } from './user/user.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { RadarInfoModule } from './radar-info/radar-info.module';
 
 @Module({
-  imports: [Res1Module
-    , PostModule
-    , UserModule
+  imports: [
+    RadarInfoModule,
+    PrismaModule
   ],
   controllers: [AppController],
   providers: [
-    AppService, PrismaService
+    AppService
   ],
 })
 export class AppModule { };

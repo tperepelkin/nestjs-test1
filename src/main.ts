@@ -11,11 +11,11 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
   // заголовок
-  .setTitle('Title')
+  .setTitle('БВС Api')
   // описание
-  .setDescription('Description')
+  .setDescription('Описание взаимодействий с системой наблюдения за полётами БВС')
   // версия
-  .setVersion('1.0')
+  .setVersion('1.0.0')
   .build();
 
   const document = SwaggerModule.createDocument(app, config);
