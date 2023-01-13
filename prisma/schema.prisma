@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model Adsb {
+  dsi               Int     @default(0) @db.UnsignedSmallInt
+  target_status     Int     @default(0) @db.UnsignedInt
+  time_of_rep_trans Float   @default(0)
+  latitude          Float   @default(0) @map("B")
+  longitude         Float   @default(0) @map("L")
+  heightFoots       Float   @default(0) @map("H_fl")
+  heightGround      Float   @default(0) @map("H_gh")
+  courseAngle       Float   @default(0) @map("angel_grd")
+  targetNumber      Int     @default(0) @map("targ_num")
+  targetAddress     Int     @default(0) @map("target_adress") @db.UnsignedInt
+  targetIdent       String? @default("") @map("target_ident") @db.VarChar(25)
+  squawk            Int     @default(0) @map("M3A_code") @db.UnsignedSmallInt
+  emitCategory      Int     @default(0) @map("emit_cat") @db.UnsignedSmallInt
+  aircrft_op_status Int     @default(0) @db.UnsignedSmallInt
+  speed_air         Float   @default(0)
+  speed_true        Float   @default(0)
+  speed_grd         Float   @default(0)
+  trd               Int     @default(0) @db.UnsignedSmallInt
+  quality           Int     @default(0) @db.SmallInt
+  time_update       Float   @default(0)
+  flags             Int     @default(0) @db.UnsignedInt
+
+  @@id([dsi, targetNumber, targetAddress])
+  @@index([time_update], map: "time_update")
+  @@map("ads_b")
+}
+
+model Mlat {
+  dsi           Int    @default(0) @db.UnsignedSmallInt
+  track_status  Int    @default(0) @db.UnsignedInt
+  time_of_day   Float  @default(0)
+  latitude      Float  @default(0) @map("B")
+  longitude     Float  @default(0) @map("L")
+  heightFoots   Float  @default(0) @map("H_fl")
+  heightGround  Float  @default(0) @map("H_gh")
+  H_mode_C      Float  @default(0)
+  H_ms          Float  @default(0)
+  targetNumber  Int    @default(0) @map("targ_num") @db.UnsignedSmallInt
+  squawk        Int    @default(0) @map("M3A_code") @db.UnsignedSmallInt
+  targetAddress Int    @default(0) @map("target_adress") @db.UnsignedInt
+  targetIdent   String @default("") @map("target_ident") @db.VarChar(25)
+  trd           Int    @default(0) @db.UnsignedInt
+  velocityX     Float  @default(0) @map("VX")
+  velocityY     Float  @default(0) @map("VY")
+  ACAS          BigInt @default(0) @db.UnsignedBigInt
+  BDS           Bytes? @db.Blob
+  VFI           Int    @default(0) @db.TinyInt
+  DOPx          Float  @default(0)
+  DOPy          Float  @default(0)
+  contrib_dev   Bytes? @db.Blob
+  time_update   Float  @default(0)
+  flags         Int    @default(0) @db.UnsignedInt
+
+  @@id([dsi, targetNumber])
+  @@index([time_update], map: "time_update")
+  @@map("mlat")
+}
+
+model Psr {
+  dsi           Int   @default(0) @db.UnsignedSmallInt
+  targetAddress Int   @default(0) @map("track_status") @db.UnsignedInt
+  time_of_day   Float @default(0)
+  latitude      Float @default(0) @map("B")
+  longitude     Float @default(0) @map("L")
+  heightGround  Float @default(0) @map("H_ms")
+  targetNumber  Int   @default(0) @map("targ_num") @db.UnsignedSmallInt
+  trd           Int   @default(0) @db.UnsignedInt
+  velocityX     Float @default(0) @map("VX")
+  velocityY     Float @default(0) @map("VY")
+  time_update   Float @default(0)
+  flags         Int   @default(0) @db.UnsignedInt
+
+  @@id([dsi, targetNumber])
+  @@index([time_update], map: "time_update")
+  @@map("psr")
+}
+
+model Zone {
+  id              Int            @id @default(autoincrement()) @db.UnsignedInt
+  name            String         @db.VarChar(200)
+  icao            String?        @db.VarChar(45)
+  flags           String?        @db.VarChar(255)
+  isRoundTheClock Boolean
+  regulations     String?        @db.VarChar(200)
+  type            String?        @db.VarChar(10)
+  belonging       String?        @db.VarChar(45)
+  milRcId         Int?           @db.UnsignedInt
+  boundaries      ZoneBoundary[]
+
+  @@map("zone")
+}
+
+model ZoneBoundary {
+  id        Int         @id @default(autoincrement()) @db.UnsignedInt
+  heightMin Int         @db.UnsignedInt
+  heightMax Int         @db.UnsignedInt
+  zoneId    Int         @db.UnsignedInt
+  zone      Zone        @relation(fields: [zoneId], references: [id], onDelete: Cascade, map: "zoneBoundary_ibfk_1")
+  points    ZonePoint[]
+
+  @@index([zoneId], map: "zoneId")
+  @@map("zoneBoundary")
+}
+
+model ZonePoint {
+  id           Int          @id @default(autoincrement()) @db.UnsignedInt
+  latitude     Float
+  longitude    Float
+  boundaryId   Int          @db.UnsignedInt
+  zoneBoundary ZoneBoundary @relation(fields: [boundaryId], references: [id], onDelete: Cascade, map: "zonePoint_ibfk_1")
+
+  @@index([boundaryId], map: "boundaryId")
+  @@map("zonePoint")
+}
+
+model Airfield {
+  id                Int     @id @default(autoincrement())
+  codeRu            String? @db.VarChar(4)
+  name              String  @db.VarChar(45)
+  type              String  @db.VarChar(10)
+  latitude          Float   @map("lat")
+  longitude         Float   @map("lon")
+  militaryZoneId    Int?    @db.UnsignedInt
+  militaryZoneName  String? @db.VarChar(45)
+  workAboutSchedule String? @db.VarChar(1000)
+
+  @@map("airfield")
+}
+
+model FileInfo {
+  id             Int       @id @default(autoincrement())
+  name           String    @unique(map: "name") @db.VarChar(255)
+  fileSize       Int       @db.UnsignedInt
+  lastDateUpdate DateTime  @db.DateTime(0)
+  checkSum       DateTime? @db.DateTime(0)
+
+  @@map("file_info")
+}
+
+model Group {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(255)
+  comment   String?     @db.VarChar(255)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  users     UserGroup[]
+
+  @@map("bvs_group")
+}
+
+model User {
+  id            Int         @id @default(autoincrement())
+  login         String      @unique(map: "login") @db.VarChar(255)
+  password      String      @db.VarChar(255)
+  firstName     String      @map("first_name") @db.VarChar(255)
+  lastName      String      @map("last_name") @db.VarChar(255)
+  wrongAttempts Int         @default(0) @map("wrong_attempts") @db.TinyInt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  groups        UserGroup[]
+
+  @@map("users")
+}
+
+model UserGroup {
+  userId  Int
+  groupId Int
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+  @@unique([userId, groupId])
+  @@map("user_group")
+}
+
+model User1 {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  posts Post[]
+}
+
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean @default(false)
+  authorId  Int
+  author    User1   @relation(fields: [authorId], references: [id])
+}
