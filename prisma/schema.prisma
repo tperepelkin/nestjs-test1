@@ -160,7 +160,7 @@ model Group {
 }
 
 model User {
-  id            Int         @id @default(autoincrement())
+  id            Int         @id @default(autoincrement()) 
   login         String      @unique(map: "login") @db.VarChar(255)
   password      String      @db.VarChar(255)
   firstName     String      @map("first_name") @db.VarChar(255)
@@ -169,6 +169,9 @@ model User {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   groups        UserGroup[]
+
+  pilottedAircrafts AircraftRegistry[]
+  ownAircrafts      AircraftRegistry[] @relation("aircraftOwner")
 
   @@map("users")
 }
@@ -184,18 +187,51 @@ model UserGroup {
   @@map("user_group")
 }
 
-model User1 {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+model AircraftRegistry {
+  aircraftNumber String @id @unique
+  pilotId        Int
+  ownerId        Int
+  pilot          User[]
+  owner          User @relation("aircraftOwner", fields: [ownerId], references: [id])
+  aicraftType    Int  @db.UnsignedTinyInt
+
+  permission     Permission[]
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  authorId  Int
-  author    User1   @relation(fields: [authorId], references: [id])
+model Restriction {
+  name       String @unique
+
+  minHeight  Int @db.UnsignedInt @default(0)
+  maxHeight  Int? @db.UnsignedInt
+
+  boundaries String
+
+  schedule   String?
+  type       String?
+  
+  objType    String?
+  objName    String?
+  
+  airdromes  String?
+  remark     String?
+  
+  bottomFlag String?
+  flag       String?
+
+  startDate  DateTime @default(now())
+  endTime    DateTime?
+
+  permission Permission?
+}
+
+model Permission {
+  id             Int @id @default(autoincrement())
+  aircraftRef    String
+  restrictionRef String @unique
+
+  startDate      DateTime @default(now())
+  endTime        DateTime?
+
+  aircraft       AircraftRegistry @relation(fields: [aircraftRef], references: [aircraftNumber])
+  permissions    Restriction @relation(fields: [restrictionRef], references: [name])
 }
