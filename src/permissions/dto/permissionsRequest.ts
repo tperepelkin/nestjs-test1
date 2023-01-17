@@ -1,8 +1,7 @@
 export class permissionsRequest {
     aircraftNumber:     string;
-    aircraftType?:      number;
     pilots?:            string[];
-    startDate?:         Date;
-    endDate?:           Date;
+    date:               Date;
     restrictionName?:   string
+    permissionName?:    string
 }
