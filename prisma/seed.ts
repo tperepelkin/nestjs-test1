@@ -1,4 +1,8 @@
-import { PrismaClient, UserGroup, User, Group } from '@prisma/client';
+import {
+    ActorType
+    , PrismaClient
+} from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 const ENGENEER_GROUP_NAME = 'engeneer';
@@ -12,71 +16,71 @@ const TEST_FIRST_PILOT_LOGIN_NAME = 'pilot1';
 const TEST_SECOND_PILOT_LOGIN_NAME = 'pilot2';
 const TEST_OWNER_LOGIN_NAME = 'owner1';
 
-const addUserToGroup = async (user: User, group: Group): Promise<UserGroup> => {
-    const result = await prisma.userGroup.upsert({
-        where: {
-            userId_groupId: {
-                userId: user.id,
-                groupId: group.id,
-            },
-        },
-        update: {},
-        create: {
-            user: {
-                connect: {
-                    id: user.id,
-                },
-            },
-            group: {
-                connect: {
-                    id: group.id,
-                }
-            }
-        },
-    });
+// const addUserToGroup = async (user: User, group: Group): Promise<UserGroup> => {
+//     const result = await prisma.userGroup.upsert({
+//         where: {
+//             userId_groupId: {
+//                 userId: user.id,
+//                 groupId: group.id,
+//             },
+//         },
+//         update: {},
+//         create: {
+//             user: {
+//                 connect: {
+//                     id: user.id,
+//                 },
+//             },
+//             group: {
+//                 connect: {
+//                     id: group.id,
+//                 }
+//             }
+//         },
+//     });
 
-    return result;
-};
+//     return result;
+// };
 
 async function main() {
-    const engeneerGroup = await prisma.group.upsert({
+    const engeneerGroup = await prisma.role.upsert({
         where: {
             name: ENGENEER_GROUP_NAME,
         },
         update: {},
         create: {
             name: ENGENEER_GROUP_NAME,
-            comment: 'группа администраторов',
+            comment: 'роль администратора',
         }
     });
-    const dispatcherGroup = await prisma.group.upsert({
+    const dispatcherGroup = await prisma.role.upsert({
         where: {
             name: DISPATCHER_GROUP_NAME,
         },
         update: {},
         create: {
             name: DISPATCHER_GROUP_NAME,
-            comment: 'группа диспетчеров',
+            comment: 'роль диспетчера',
         }
     });
-    const pilotGroup = await prisma.group.upsert({
+    const pilotGroup = await prisma.role.upsert({
         where: {
             name: PILOT_GROUP_NAME,
         },
         update: {},
         create: {
             name: PILOT_GROUP_NAME,
-            comment: 'группа внешних пилотов',
+            comment: 'роль внешнего пилота',
         }
     });
-    const ownerGroup = await prisma.group.upsert({
+    const ownerGroup = await prisma.role.upsert({
         where: {
             name: OWNER_GROUP_NAME,
         },
         update: {},
         create: {
             name: OWNER_GROUP_NAME,
-            comment: 'группа владельцев беспитлотников',
+            comment: 'роль владельца воздушного судна',
         }
     });
 
@@ -88,11 +92,10 @@ async function main() {
         create: {
             login: BASE_ENGENEER_LOGIN_NAME,
             password: 'password',
-            firstName: 'Инженер',
-            lastName: 'Администраторов',
-            wrongAttempts: 0,
-            groups: {
-                create: [],
+            // firstName: 'Инженер',
+            // lastName: 'Администраторов',
+            roles: {
+                connect: [{ id: engeneerGroup.id }],
             }
         },
     });
@@ -105,11 +108,10 @@ async function main() {
         create: {
             login: TEST_FIRST_DISPATCHER_LOGIN_NAME,
             password: 'password',
-            firstName: 'Диспетчер',
-            lastName: 'Бэвээсов',
-            wrongAttempts: 0,
-            groups: {
-                create: [],
+            // firstName: 'Диспетчер',
+            // lastName: 'Бэвээсов',
+            roles: {
+                connect: [{ id: dispatcherGroup.id }],
             }
         },
     });
@@ -122,11 +124,11 @@ async function main() {
         create: {
             login: TEST_FIRST_PILOT_LOGIN_NAME,
             password: 'password',
-            firstName: 'Первый Пилот',
-            lastName: 'Летунов',
+            // firstName: 'Первый Пилот',
+            // lastName: 'Летунов',
             wrongAttempts: 0,
-            groups: {
-                create: [],
+            roles: {
+                connect: [{ id: pilotGroup.id }],
             }
         },
     });
@@ -139,11 +141,10 @@ async function main() {
         create: {
             login: TEST_SECOND_PILOT_LOGIN_NAME,
             password: 'password',
-            firstName: 'Второй Пилот',
-            lastName: 'Летунович',
-            wrongAttempts: 0,
-            groups: {
-                create: [],
+            // firstName: 'Второй Пилот',
+            // lastName: 'Летунович',
+            roles: {
+                connect: [{ id: pilotGroup.id }, { id: ownerGroup.id }],
             }
         },
     });
@@ -156,47 +157,91 @@ async function main() {
         create: {
             login: TEST_OWNER_LOGIN_NAME,
             password: 'password',
-            firstName: 'Повелитель',
-            lastName: 'Беспилотников',
-            wrongAttempts: 0,
-            groups: {
-                create: [],
+            roles: {
+                connect: [{ id: ownerGroup.id }],
             }
         },
     });
 
-    // Добавим базовый пользователю роль администратора
-    const engeneer1GroupLink1 = addUserToGroup(engeneer1, engeneerGroup);
-    // Добавим пользователю-диспетчеру роль диспетчера
-    const dispatcher1GroupLink1 = addUserToGroup(dispatcher1, dispatcherGroup);
-    // Добавим пользователю, первому пилоту, роль пилота
-    const pilot1GroupLink1 = addUserToGroup(pilot1, pilotGroup);
-    // Добавим пользователю, второму пилоту, роль пилота
-    const pilot2GroupLink1 = addUserToGroup(pilot2, pilotGroup);
-    // Добавим пользователю, владельцу БПЛА, роль владельца
-    const owner1GroupLink1 = addUserToGroup(owner1, ownerGroup);
-    // Добавим пользователю, владельцу БПЛА, роль пилота
-    const owner1GroupLink2 = addUserToGroup(owner1, pilotGroup);
+    console.log('owner1', owner1);
 
-    const user = await prisma.user.findUnique({
-        where: {
-            login: TEST_OWNER_LOGIN_NAME,
-        },
-        select: {
-            login: true,
-            groups: {
-                select: {
-                    group: {
-                        select: {
-                            name: true,
-                            comment: true,
-                        },
-                    },
-                },
+    const ownerPerson1 = await prisma.individual.create({
+        data: {
+            firstName: 'Повелитель',
+            lastName: 'Беспилотников',
+            patronimyc: 'Батькович',
+            passportSeries: '1234',
+            passportNumber: '123456',
+            address: '',
+            passportSource: '',
+            actor: {
+                create: {
+                    type: ActorType.USER,
+                    user: {
+                        connect: {
+                            id: owner1.id
+                        }
+                    }
+                }
             },
         },
+        include: {
+            actor: {
+                include: {
+                    user: true,
+                }
+            }
+        }
     });
-    console.log(JSON.stringify(user, null, 2));
+
+    const person = await prisma.individual.findFirst({
+        where: {
+            firstName: 'Повелитель',
+            lastName: 'Беспилотников',
+        },
+        include: {
+            actor: {
+                include: {
+                    user: true,
+                }
+            }
+        }
+    });
+
+    console.log('ownerPerson1', ownerPerson1);
+    // console.log('Person', person);
+
+    // if (person.actor) {
+    //     const actor = await prisma.actor.update({
+    //         where: {
+    //             id: person.actor.id,
+    //         },
+    //         data: {
+    //             user: {
+    //                 connect: {
+    //                     id: owner1.id,
+    //                 }
+    //             }
+    //         }
+    //     });
+    //     console.log('Actor', actor);
+    // }
+
+    // const user = await prisma.user.findUnique({
+    //     where: {
+    //         login: TEST_SECOND_PILOT_LOGIN_NAME,
+    //     },
+    //     select: {
+    //         login: true,
+    //         roles: {
+    //             select: {
+    //                 name: true,
+    //                 comment: true,
+    //             },
+    //         },
+    //     },
+    // });
+    // console.log(JSON.stringify(user, null, 2));
 }
 
 main()

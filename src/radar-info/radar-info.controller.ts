@@ -2,18 +2,55 @@ import {
     Controller,
     Get,
     Param,
-    Body
+    Body,
+    UseGuards,
+    SetMetadata,
+    CanActivate,
+    ExecutionContext,
+    UnauthorizedException,
+    ForbiddenException
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import IAdsbData, { AdsbData } from './dto/adsb-client-data';
 import { RadarInfoService } from './radar-info.service';
 import { NotFoundException } from '@nestjs/common'
-import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
+import {
+    ApiExtraModels
+    , ApiNotFoundResponse
+    , ApiOkResponse
+    , getSchemaPath
+    , ApiOperation
+    , ApiParam
+    , ApiForbiddenResponse
+} from '@nestjs/swagger'
+import { Roles } from 'src/permissions/decorators/roles.decorator';
 
 @Controller('radar')
-export class RadarInfoController {
+export class RadarInfoController implements CanActivate {
     constructor(
-        private readonly radarService: RadarInfoService
+        private readonly radarService: RadarInfoService,
+        private reflector: Reflector
     ) { }
+
+    canActivate(
+        context: ExecutionContext,
+    ): boolean | Promise<boolean> {
+        const roles = this.reflector.get<string[]>('roles', context.getHandler());
+        if (!roles) {
+            return true;
+        }
+
+        const request = context.switchToHttp().getRequest();
+        const user = request.user;
+        console.log('User', user);
+
+        // By default throws ForbiddenException
+        // if (roles.includes(user))  {
+        //     throw new UnauthorizedException();
+        // }
+
+        return true;
+    }
 
     // async getAdsb(@Body('targetIdent') targetIdent: string): Promise<IAdsbData> {
     //     const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
@@ -23,17 +60,28 @@ export class RadarInfoController {
     //     return result;
     // }
 
-    async getAllPermissions(): Promise<any> {
-        const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
-        if (!result) {
-            throw new NotFoundException(`Adsb with target ident ${targetIdent} was not found`);
-        }
-        return result;
-    }
+    // async getAllPermissions(): Promise<any> {
+    //     const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
+    //     if (!result) {
+    //         throw new NotFoundException(`Adsb with target ident ${targetIdent} was not found`);
+    //     }
+    //     return result;
+    // }
 
+    /**
+     * Возвращает информацию о воздушном судне по его идентификатору
+     * @param targetIdent код ICAO воздушного судна @example ['SBI1211']
+     * @returns 
+     */
     @ApiExtraModels(AdsbData)
-    @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetIdent, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
-    @ApiResponse({ status: 404, description: 'Когда БВС не найден по заданному targetIdent среди данных от источников ADSB', })
+    @ApiOkResponse({
+        description: '200. Возвращает БВС по его targetIdent, найденный среди данных от источников ADSB',
+        schema: { $ref: getSchemaPath(AdsbData) }
+    })
+    @ApiNotFoundResponse({
+        description: '404. Когда БВС не найден по заданному targetIdent среди данных от источников ADSB',
+    })
+    @Roles('admin')
     @Get('adsb/byIdent/:targetIdent')
     async getAdsbByTargetIdent(@Param('targetIdent') targetIdent: string): Promise<IAdsbData> {
         const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
@@ -43,8 +91,13 @@ export class RadarInfoController {
         return result;
     }
 
-    @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetAddress, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
-    @ApiResponse({ status: 404, description: 'Когда БВС не найден по заданному targetAddress среди данных от источников ADSB', })
+    @ApiOkResponse({
+        description: '200. Возвращает БВС по его targetAddress, найденный среди данных от источников ADSB',
+        schema: { $ref: getSchemaPath(AdsbData) }
+    })
+    @ApiNotFoundResponse({
+        description: '404. Когда БВС не найден по заданному targetAddress среди данных от источников ADSB',
+    })
     @Get('adsb/byAddress/:targetAddress')
     async getAdsbByTargetAddress(@Param('targetAddress') targetAddress: number): Promise<IAdsbData> {
         const result = this.radarService.getAdsbByTargetAddress(targetAddress);
@@ -54,7 +107,9 @@ export class RadarInfoController {
         return result;
     }
 
-    @ApiResponse({ status: 200, description: 'Возвращает список всех БВС от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
+    @ApiOkResponse({
+        description: '200. Возвращает список всех БВС от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) }
+    })
     @Get('adsb')
     async getAllAdsb(): Promise<IAdsbData[]> {
         return this.radarService.getAllAdsb();

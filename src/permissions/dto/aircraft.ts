@@ -1,3 +1,3 @@
-export default class Permission {
-  }
+export default class Aircraft {
+}
   

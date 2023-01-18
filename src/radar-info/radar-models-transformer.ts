@@ -18,8 +18,8 @@ export class RadarModelsTransformer {
             altitude: this.helper.getAltitude(db.heightGround, db.heightFoots),
             courseAngle: db.courseAngle,
             targetNumber: db.targetNumber,
-            callSign: db.targetIdent,
-            icao: db.targetAddress,
+            targetIdent: db.targetIdent,
+            targetAddress: db.targetAddress,
             squawk: db.squawk,
             planeType: db.emitCategory,
         }
@@ -33,9 +33,10 @@ export class RadarModelsTransformer {
             altitude: this.helper.getAltitude(db.heightGround, db.heightFoots),
             courseAngle: this.helper.getCourseAngle(db.velocityX, db.velocityY),
             targetNumber: db.targetNumber,
-            callSign: db.targetAddress,
-            icao: db.targetIdent,
-            squawk: db.squawk,        }
+            targetIdent: db.targetIdent,
+            targetAddress: db.targetAddress,
+            squawk: db.squawk,
+        }
     }
 
 }

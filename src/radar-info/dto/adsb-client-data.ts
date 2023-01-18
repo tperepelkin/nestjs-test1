@@ -6,9 +6,9 @@ export default interface IAdsbData {
   longitude: number;
   altitude: number;
   courseAngle: number;
+  targetAddress: number;
   targetNumber: number;
-  callSign: string;
-  icao: number;
+  targetIdent: string;
   squawk: number;
   planeType: number; 
 }
@@ -25,11 +25,11 @@ export class AdsbData implements IAdsbData {
   @ApiProperty()
   courseAngle: number;
   @ApiProperty()
+  targetAddress: number;
+  @ApiProperty()
   targetNumber: number;
   @ApiProperty()
-  callSign: string;
-  @ApiProperty()
-  icao: number;
+  targetIdent: string;
   @ApiProperty()
   squawk: number;
   @ApiProperty()

@@ -4,8 +4,8 @@ import {
     Param,
     Body
 } from '@nestjs/common';
-import IAdsbData, { AdsbData } from './dto/adsb-client-data';
-import { RadarInfoService } from './radar-info.service';
+import IAdsbData, { AdsbData } from '../radar-info/dto/adsb-client-data';
+import { RadarInfoService } from '../radar-info/radar-info.service';
 import { NotFoundException } from '@nestjs/common'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
 
@@ -22,14 +22,6 @@ export class RadarInfoController {
     //     }
     //     return result;
     // }
-
-    async getAllPermissions(): Promise<any> {
-        const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
-        if (!result) {
-            throw new NotFoundException(`Adsb with target ident ${targetIdent} was not found`);
-        }
-        return result;
-    }
 
     @ApiExtraModels(AdsbData)
     @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetIdent, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })

@@ -8,6 +8,42 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+enum RoleEnum {
+  USER
+  ENGENEER
+  DISPATCHER
+  OWNER
+  PILOT
+}
+
+model Migrate {
+  id    Int      @id @default(autoincrement())
+  group RoleEnum @default(USER)
+}
+
+// Пользователь системы с возможностью логина и выполнения действий
+model User {
+  id            Int      @id @default(autoincrement())
+  login         String   @unique(map: "login") @db.VarChar(255)
+  password      String   @db.VarChar(250)
+  wrongAttempts Int      @default(0) @map("wrong_attempts") @db.TinyInt
+  actor         Actor?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  roles         Role[]   @relation("user_role")
+
+  @@map("bvs_user")
+}
+
+model Role {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique @db.VarChar(255)
+  comment String? @db.VarChar(255)
+  users   User[]  @relation("user_role")
+
+  @@map("bvs_role")
+}
+
 model Adsb {
   dsi               Int     @default(0) @db.UnsignedSmallInt
   target_status     Int     @default(0) @db.UnsignedInt
@@ -125,15 +161,16 @@ model ZonePoint {
 }
 
 model Airfield {
-  id                Int     @id @default(autoincrement())
-  codeRu            String? @db.VarChar(4)
-  name              String  @db.VarChar(45)
-  type              String  @db.VarChar(10)
-  latitude          Float   @map("lat")
-  longitude         Float   @map("lon")
-  militaryZoneId    Int?    @db.UnsignedInt
-  militaryZoneName  String? @db.VarChar(45)
-  workAboutSchedule String? @db.VarChar(1000)
+  id                Int          @id @default(autoincrement())
+  codeRu            String?      @db.VarChar(4)
+  name              String       @db.VarChar(45)
+  type              String       @db.VarChar(10)
+  latitude          Float        @map("lat")
+  longitude         Float        @map("lon")
+  militaryZoneId    Int?         @db.UnsignedInt
+  militaryZoneName  String?      @db.VarChar(45)
+  workAboutSchedule String?      @db.VarChar(1000)
+  permission        Permission[] @relation("permission_airfield")
 
   @@map("airfield")
 }
@@ -148,90 +185,108 @@ model FileInfo {
   @@map("file_info")
 }
 
-model Group {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique @db.VarChar(255)
-  comment   String?     @db.VarChar(255)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  users     UserGroup[]
+enum ActorType {
+  USER
+  ORGANIZATION
 
-  @@map("bvs_group")
+  @@map("Actor")
 }
 
-model User {
-  id            Int         @id @default(autoincrement()) 
-  login         String      @unique(map: "login") @db.VarChar(255)
-  password      String      @db.VarChar(255)
-  firstName     String      @map("first_name") @db.VarChar(255)
-  lastName      String      @map("last_name") @db.VarChar(255)
-  wrongAttempts Int         @default(0) @map("wrong_attempts") @db.TinyInt
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  groups        UserGroup[]
+// Контакты хранимого в системе физлица или юрлица
+model Contact {
+  id      Int    @id @default(autoincrement())
+  name    String @db.VarChar(50)
+  value   String @db.VarChar(250)
+  actorId Int?
+  actor   Actor? @relation(fields: [actorId], references: [id])
 
-  pilottedAircrafts AircraftRegistry[]
-  ownAircrafts      AircraftRegistry[] @relation("aircraftOwner")
-
-  @@map("users")
+  @@map("contact")
 }
 
-model UserGroup {
-  userId  Int
-  groupId Int
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+// Физическое или юридическое лицо, хранимое в системе
+model Actor {
+  id           Int          @id @default(autoincrement())
+  type         ActorType
+  individual   Individual? // Физлицо или юрлицо могут также пилотами или владельцами воздушного судна
+  entity       Entity?
+  userId       Int?         @unique
+  user         User?        @relation(fields: [userId], references: [id])
+  contacts     Contact[]
+  ownAircrafts Aircraft[]   @relation("aircraftOwner")
+  permissions  Permission[] @relation("permission_actor")
 
-  @@id([userId, groupId])
-  @@unique([userId, groupId])
-  @@map("user_group")
+  @@map("actor")
 }
 
-model AircraftRegistry {
-  aircraftNumber String @id @unique
+// Физическое лицо. Может ссылаться на сущность "Пользователь в системе".
+model Individual {
+  id                Int          @id @default(autoincrement())
+  firstName         String       @map("first_name") @db.VarChar(150) // Имя
+  lastName          String       @map("last_name") @db.VarChar(200) // Фамилия
+  patronimyc        String       @db.VarChar(150) // Отчество
+  passportSeries    String       @db.Char(4) // Серия паспорта
+  passportNumber    String       @db.Char(6) // Номер паспорта
+  address           String       @db.VarChar(400) // Адрес регистрации по месту жительства
+  passportSource    String       @db.VarChar(400) // Кем выдан паспорт
+  actorId           Int?         @unique
+  actor             Actor?       @relation(fields: [actorId], references: [id])
+  permissions       Permission[] @relation("permission_pilot")
+  pilottedAircrafts Aircraft[]   @relation("pilot_aircrafts")
+
+  @@map("individual")
+}
+
+// Юридическое лицо
+model Entity {
+  id               Int      @id @default(autoincrement())
+  name             String
+  inn              String   @db.VarChar(12) // ИНН ИП или организации
+  ogrn             String   @db.Char(13) // ОГРН организации
+  registrationDate DateTime
+  address          String   @db.VarChar(400) // Адрес регистрации
+  actorId          Int?     @unique
+  actor            Actor?   @relation(fields: [actorId], references: [id])
+
+  @@map("legal_entity")
+}
+
+model Aircraft {
+  id             Int          @id @default(autoincrement())
+  modelName      String
+  aircraftNumber String?      @unique
   pilotId        Int
+  pilot          Individual[] @relation("pilot_aircrafts")
   ownerId        Int
-  pilot          User[]
-  owner          User @relation("aircraftOwner", fields: [ownerId], references: [id])
-  aicraftType    Int  @db.UnsignedTinyInt
+  owner          Actor        @relation("aircraftOwner", fields: [ownerId], references: [id])
+  aicraftType    Int          @db.UnsignedTinyInt
+  permissions    Permission[] @relation("permissions_aircrafts")
 
-  permission     Permission[]
+  @@map("aircraft")
 }
 
-model Restriction {
-  name       String @unique
-
-  minHeight  Int @db.UnsignedInt @default(0)
-  maxHeight  Int? @db.UnsignedInt
-
-  boundaries String
-
-  schedule   String?
-  type       String?
-  
-  objType    String?
-  objName    String?
-  
-  airdromes  String?
-  remark     String?
-  
-  bottomFlag String?
-  flag       String?
-
-  startDate  DateTime @default(now())
-  endTime    DateTime?
-
-  permission Permission?
-}
+// model Restriction {
+//   id         Int @id @default(autoincrement())
+//   name       String @unique
+// }
 
 model Permission {
-  id             Int @id @default(autoincrement())
-  aircraftRef    String
-  restrictionRef String @unique
+  id         Int          @id @default(autoincrement())
+  number     Int?         @unique // Номер разрешения 
+  aircrafts  Aircraft[]   @relation("permissions_aircrafts")
+  pilots     Individual[] @relation("permission_pilot")
+  airfields  Airfield[]   @relation("permission_airfield")
+  actors     Actor[]      @relation("permission_actor")
+  // Дата выдачи разрешения
+  createDate DateTime     @default(now())
+  // Дата начала действия разрешения
+  startDate  DateTime     @default(now())
+  // Дата окончания действия разрешения
+  endDate    DateTime?
 
-  startDate      DateTime @default(now())
-  endTime        DateTime?
+  //   // Список воздушных судов, на которые выдано разрешение
+  //   aircraft       AircraftRegistry @relation(fields: [aircraftRef], references: [aircraftNumber])
+  //   // permissions    Restriction @relation(fields: [restrictionRef], references: [name])
 
-  aircraft       AircraftRegistry @relation(fields: [aircraftRef], references: [aircraftNumber])
-  permissions    Restriction @relation(fields: [restrictionRef], references: [name])
+  //   // После отзыва разрешения не удаляем запись из таблицы, а устанавливаем соответствующий флаг
+  isObsoleted Boolean @default(false)
 }

@@ -4,8 +4,8 @@ export default interface IMlatData {
   longitude: number;
   altitude: number;
   courseAngle: number;
+  targetAddress: number;
   targetNumber: number;
-  callSign: number;
-  icao: string;
+  targetIdent: string;
   squawk: number;
 }
