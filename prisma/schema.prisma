@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -24,8 +25,8 @@ model Migrate {
 // Пользователь системы с возможностью логина и выполнения действий
 model User {
   id            Int      @id @default(autoincrement())
-  login         String   @unique(map: "login") @db.VarChar(255)
-  password      String   @db.VarChar(250)
+  login         String   @unique(map: "login") @db.VarChar(50)
+  password      String   @db.VarChar(200)
   wrongAttempts Int      @default(0) @map("wrong_attempts") @db.TinyInt
   actor         Actor?
   createdAt     DateTime @default(now())
@@ -37,8 +38,8 @@ model User {
 
 model Role {
   id      Int     @id @default(autoincrement())
-  name    String  @unique @db.VarChar(255)
-  comment String? @db.VarChar(255)
+  name    String  @unique @db.VarChar(50)
+  comment String? @db.VarChar(250)
   users   User[]  @relation("user_role")
 
   @@map("bvs_role")
@@ -125,12 +126,12 @@ model Psr {
 model Zone {
   id              Int            @id @default(autoincrement()) @db.UnsignedInt
   name            String         @db.VarChar(200)
-  icao            String?        @db.VarChar(45)
-  flags           String?        @db.VarChar(255)
+  icao            String?        @db.VarChar(10)
+  flags           String?        @db.VarChar(10)
   isRoundTheClock Boolean
   regulations     String?        @db.VarChar(200)
   type            String?        @db.VarChar(10)
-  belonging       String?        @db.VarChar(45)
+  belonging       String?        @db.VarChar(50)
   milRcId         Int?           @db.UnsignedInt
   boundaries      ZoneBoundary[]
 
@@ -162,14 +163,14 @@ model ZonePoint {
 
 model Airfield {
   id                Int          @id @default(autoincrement())
-  codeRu            String?      @db.VarChar(4)
-  name              String       @db.VarChar(45)
+  code              String?      @db.VarChar(4)
+  name              String       @db.VarChar(50)
   type              String       @db.VarChar(10)
   latitude          Float        @map("lat")
   longitude         Float        @map("lon")
   militaryZoneId    Int?         @db.UnsignedInt
-  militaryZoneName  String?      @db.VarChar(45)
-  workAboutSchedule String?      @db.VarChar(1000)
+  militaryZoneName  String?      @db.VarChar(50)
+  workAboutSchedule String?      @db.VarChar(500)
   permission        Permission[] @relation("permission_airfield")
 
   @@map("airfield")
@@ -177,7 +178,7 @@ model Airfield {
 
 model FileInfo {
   id             Int       @id @default(autoincrement())
-  name           String    @unique(map: "name") @db.VarChar(255)
+  name           String    @unique(map: "name") @db.VarChar(100)
   fileSize       Int       @db.UnsignedInt
   lastDateUpdate DateTime  @db.DateTime(0)
   checkSum       DateTime? @db.DateTime(0)
@@ -221,18 +222,19 @@ model Actor {
 // Физическое лицо. Может ссылаться на сущность "Пользователь в системе".
 model Individual {
   id                Int          @id @default(autoincrement())
-  firstName         String       @map("first_name") @db.VarChar(150) // Имя
+  firstName         String       @map("first_name") @db.VarChar(100) // Имя
   lastName          String       @map("last_name") @db.VarChar(200) // Фамилия
-  patronimyc        String       @db.VarChar(150) // Отчество
+  patronimyc        String       @db.VarChar(100) // Отчество
   passportSeries    String       @db.Char(4) // Серия паспорта
   passportNumber    String       @db.Char(6) // Номер паспорта
-  address           String       @db.VarChar(400) // Адрес регистрации по месту жительства
-  passportSource    String       @db.VarChar(400) // Кем выдан паспорт
+  address           String       @db.VarChar(500) // Адрес регистрации по месту жительства
+  passportSource    String       @db.VarChar(500) // Кем выдан паспорт
   actorId           Int?         @unique
   actor             Actor?       @relation(fields: [actorId], references: [id])
   permissions       Permission[] @relation("permission_pilot")
   pilottedAircrafts Aircraft[]   @relation("pilot_aircrafts")
 
+  @@unique([passportSeries, passportNumber])
   @@map("individual")
 }
 
@@ -270,23 +272,27 @@ model Aircraft {
 // }
 
 model Permission {
-  id         Int          @id @default(autoincrement())
-  number     Int?         @unique // Номер разрешения 
-  aircrafts  Aircraft[]   @relation("permissions_aircrafts")
-  pilots     Individual[] @relation("permission_pilot")
-  airfields  Airfield[]   @relation("permission_airfield")
-  actors     Actor[]      @relation("permission_actor")
+  id               Int          @id @default(autoincrement())
+  // Номер разрешения 
+  permissionNumber Int?         @unique
+  //Список воздушных судов, на которые выдано разрешение
+  aircrafts        Aircraft[]   @relation("permissions_aircrafts")
+  // Список пилотов
+  pilots           Individual[] @relation("permission_pilot")
+  airfields        Airfield[]   @relation("permission_airfield")
+  // Кому выдано разрешение
+  recipientId      Int
+  recipient        Actor        @relation("permission_actor", fields: [recipientId], references: [id])
+  // Цель полёта
+  target           String       @db.VarChar(250)
+  // Описание района полёта
+  zoneDescription  String       @db.VarChar(500)
   // Дата выдачи разрешения
-  createDate DateTime     @default(now())
+  createDate       DateTime     @default(now())
   // Дата начала действия разрешения
-  startDate  DateTime     @default(now())
+  startDate        DateTime     @default(now())
   // Дата окончания действия разрешения
-  endDate    DateTime?
-
-  //   // Список воздушных судов, на которые выдано разрешение
-  //   aircraft       AircraftRegistry @relation(fields: [aircraftRef], references: [aircraftNumber])
-  //   // permissions    Restriction @relation(fields: [restrictionRef], references: [name])
-
+  endDate          DateTime?
   //   // После отзыва разрешения не удаляем запись из таблицы, а устанавливаем соответствующий флаг
-  isObsoleted Boolean @default(false)
+  isObsoleted      Boolean      @default(false)
 }

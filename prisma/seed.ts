@@ -1,5 +1,6 @@
 import {
     ActorType
+    , Individual
     , PrismaClient
 } from '@prisma/client';
 
@@ -15,32 +16,6 @@ const TEST_FIRST_DISPATCHER_LOGIN_NAME = 'dispatcher1';
 const TEST_FIRST_PILOT_LOGIN_NAME = 'pilot1';
 const TEST_SECOND_PILOT_LOGIN_NAME = 'pilot2';
 const TEST_OWNER_LOGIN_NAME = 'owner1';
-
-// const addUserToGroup = async (user: User, group: Group): Promise<UserGroup> => {
-//     const result = await prisma.userGroup.upsert({
-//         where: {
-//             userId_groupId: {
-//                 userId: user.id,
-//                 groupId: group.id,
-//             },
-//         },
-//         update: {},
-//         create: {
-//             user: {
-//                 connect: {
-//                     id: user.id,
-//                 },
-//             },
-//             group: {
-//                 connect: {
-//                     id: group.id,
-//                 }
-//             }
-//         },
-//     });
-
-//     return result;
-// };
 
 async function main() {
     const engeneerGroup = await prisma.role.upsert({
@@ -163,85 +138,59 @@ async function main() {
         },
     });
 
-    console.log('owner1', owner1);
-
-    const ownerPerson1 = await prisma.individual.create({
-        data: {
-            firstName: 'Повелитель',
-            lastName: 'Беспилотников',
-            patronimyc: 'Батькович',
-            passportSeries: '1234',
-            passportNumber: '123456',
-            address: '',
-            passportSource: '',
-            actor: {
-                create: {
-                    type: ActorType.USER,
-                    user: {
-                        connect: {
-                            id: owner1.id
-                        }
-                    }
-                }
-            },
-        },
-        include: {
-            actor: {
-                include: {
-                    user: true,
-                }
-            }
-        }
-    });
-
-    const person = await prisma.individual.findFirst({
+    let ownerPerson1: Individual = await prisma.individual.findFirst({
         where: {
             firstName: 'Повелитель',
             lastName: 'Беспилотников',
+            patronimyc: 'Батькович',
         },
-        include: {
-            actor: {
-                include: {
-                    user: true,
+    });
+    if (!ownerPerson1) {
+        ownerPerson1 = await prisma.individual.create({
+            data: {
+                firstName: 'Повелитель',
+                lastName: 'Беспилотников',
+                patronimyc: 'Батькович',
+                passportSeries: '1234',
+                passportNumber: '123456',
+                address: '',
+                passportSource: '',
+                actor: {
+                    create: {
+                        type: ActorType.USER,
+                        user: {
+                            connect: {
+                                id: owner1.id
+                            }
+                        }
+                    }
+                },
+            },
+            include: {
+                actor: {
+                    include: {
+                        user: true,
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
-    console.log('ownerPerson1', ownerPerson1);
-    // console.log('Person', person);
-
-    // if (person.actor) {
-    //     const actor = await prisma.actor.update({
-    //         where: {
-    //             id: person.actor.id,
-    //         },
-    //         data: {
-    //             user: {
-    //                 connect: {
-    //                     id: owner1.id,
-    //                 }
+    console.log(ownerPerson1);
+    // const person = await prisma.individual.findFirst({
+    //     where: {
+    //         firstName: 'Повелитель',
+    //         lastName: 'Беспилотников',
+    //     },
+    //     include: {
+    //         actor: {
+    //             include: {
+    //                 user: true,
     //             }
     //         }
-    //     });
-    //     console.log('Actor', actor);
-    // }
-
-    // const user = await prisma.user.findUnique({
-    //     where: {
-    //         login: TEST_SECOND_PILOT_LOGIN_NAME,
-    //     },
-    //     select: {
-    //         login: true,
-    //         roles: {
-    //             select: {
-    //                 name: true,
-    //                 comment: true,
-    //             },
-    //         },
-    //     },
+    //     }
     // });
-    // console.log(JSON.stringify(user, null, 2));
+    // console.log(person);
 }
 
 main()
@@ -253,3 +202,4 @@ main()
         await prisma.$disconnect();
         process.exit(1);
     });
+
