@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch"]
 }
 
@@ -14,6 +14,11 @@ enum RoleEnum {
   ENGENEER
   DISPATCHER
   OWNER
+  PILOT
+}
+
+enum AircraftType {
+  BVS
   PILOT
 }
 
@@ -209,6 +214,7 @@ model Actor {
   id           Int          @id @default(autoincrement())
   type         ActorType
   individual   Individual? // Физлицо или юрлицо могут также пилотами или владельцами воздушного судна
+  entityId     Int?         @unique
   entity       Entity?
   userId       Int?         @unique
   user         User?        @relation(fields: [userId], references: [id])
@@ -255,12 +261,11 @@ model Entity {
 model Aircraft {
   id             Int          @id @default(autoincrement())
   modelName      String
-  aircraftNumber String?      @unique
-  pilotId        Int
-  pilot          Individual[] @relation("pilot_aircrafts")
+  aircraftNumber String       @unique
+  pilots         Individual[] @relation("pilot_aircrafts")
   ownerId        Int
   owner          Actor        @relation("aircraftOwner", fields: [ownerId], references: [id])
-  aicraftType    Int          @db.UnsignedTinyInt
+  aircraftType   AircraftType @default(BVS)
   permissions    Permission[] @relation("permissions_aircrafts")
 
   @@map("aircraft")

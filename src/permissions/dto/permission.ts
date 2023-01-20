@@ -14,7 +14,7 @@ export class PermissionRequest {
     permissionNumber: string
 }
 
-export type KPASIVPPermissionDetails = {
+export type KsaPivpPermissionDetails = {
   permissionNumber: string;
   startDate: string;
   endDate: string;
@@ -34,11 +34,18 @@ export type PermissionDetails = Omit<Permission, 'isObsoleted'> & {
   airfields: Airfield[]
 }
 
-export class PermissionShortResponse {
+export type PermissionShortResponse = {
   result: boolean;
 }
 
-export class KPASIVPPermissionDetailedResponse extends PermissionShortResponse {
-  details: KPASIVPPermissionDetails;
+export type KsaPivpPermissionDetailedResponse = PermissionShortResponse & {
+  details?: KsaPivpPermissionDetails;
 }
 
+export type PermissionDetailedResponse = PermissionShortResponse & {
+  details?: PermissionDetails;
+}
+
+export const NOT_FOUND_PERMISSION_RESPONSE: KsaPivpPermissionDetailedResponse = {
+  result: false,
+};
