@@ -15,7 +15,7 @@ export class PermissionRequest {
 }
 
 export type KsaPivpPermissionDetails = {
-  permissionNumber: string;
+  permissionNumber: number;
   startDate: string;
   endDate: string;
   pilots: PilotShort[];
