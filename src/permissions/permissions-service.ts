@@ -20,7 +20,7 @@ export class PermissionsService {
     async getPermissionsBy(
         number: number, pilots: PilotShort[], date: Date, aircraftNumber: string
     ): Promise<KsaPivpPermissionDetailedResponse> {
-        const result = await this.repository.getPermissionBy(number, pilots, date, aircraftNumber);
+        const result = await this.repository.getPermission(number, pilots, date, aircraftNumber);
 
         if (!result) {
             return NOT_FOUND_PERMISSION_RESPONSE;
