@@ -8,7 +8,8 @@ import {
     CanActivate,
     ExecutionContext,
     UnauthorizedException,
-    ForbiddenException
+    ForbiddenException,
+    Logger
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import IAdsbData, { AdsbData } from './dto/adsb-client-data';
@@ -24,9 +25,11 @@ import {
     , ApiForbiddenResponse
 } from '@nestjs/swagger'
 import { Roles } from 'src/permissions/decorators/roles.decorator';
+import { isAircraft } from 'src/permissions/utils';
 
 @Controller('radar')
 export class RadarInfoController implements CanActivate {
+    private readonly logger = new Logger(RadarInfoController.name);
     constructor(
         private readonly radarService: RadarInfoService,
         private reflector: Reflector

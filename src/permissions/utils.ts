@@ -1,7 +1,12 @@
+import { isArray } from 'lodash';
 import { Aircraft, Individual } from "@prisma/client";
 import { AircraftShort, PilotShort } from "./dto/permission";
 
-function isPilot(pilot: any): pilot is PilotShort {
+export function isArray(array: any): array is any[] {
+  return Array.isArray(array);
+}
+
+export function isPilot(pilot: any): pilot is PilotShort {
   if (typeof pilot === 'object') {
       pilot = (pilot as PilotShort);
       return pilot.firstName !== undefined
@@ -12,7 +17,7 @@ function isPilot(pilot: any): pilot is PilotShort {
   }
 }
 
-function isAircraft(aircraft: any): aircraft is AircraftShort {
+export function isAircraft(aircraft: any): aircraft is AircraftShort {
   if (typeof aircraft === 'object') {
       aircraft = (aircraft as AircraftShort);
       return aircraft.aircraftNumber !== undefined;
@@ -21,7 +26,7 @@ function isAircraft(aircraft: any): aircraft is AircraftShort {
   }
 }
 
-function compareItems(
+export function compareItems(
   item1: PilotShort | Individual | Aircraft | AircraftShort,
   item2: PilotShort | Individual | Aircraft | AircraftShort
 ): boolean {
@@ -33,13 +38,12 @@ function compareItems(
 
   if (isAircraft(item1) && isAircraft(item2)) {
       return item1.aircraftNumber === item2.aircraftNumber;
-
   }
 
   throw new TypeError('Wrong parameter types!');
 }
 
-function isArrayIncludes<T extends PilotShort | Individual | Aircraft | AircraftShort>(
+export function isArrayIncludes<T extends PilotShort | Individual | Aircraft | AircraftShort>(
   original: Array<T>,
   included: Array<T>,
   predicate: (item1: T, item2: T) => boolean

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Permission } from '@prisma/client';
 import { KsaPivpPermissionDetailedResponse, NOT_FOUND_PERMISSION_RESPONSE, PilotShort } from './dto/permission';
 import { PermissionsRepository } from './permissions-repository';
@@ -8,35 +8,25 @@ const DATE_FORMAT = 'DD.MM.YYYY kk:mm';
 
 @Injectable()
 export class PermissionsService {
+    private readonly logger = new Logger(PermissionsService.name);
+
     constructor(
         private repository: PermissionsRepository,
     ) { }
 
-    async getAllPermissions(): Promise<KsaPivpPermissionDetailedResponse[]> {
+    async getAllPermissions(): Promise<Array<Permission>> {
         const result = await this.repository.getAllPermissions();
-        return [];
+        return result;
     }
 
-    async getPermissionsBy(
-        number: number, pilots: PilotShort[], date: Date, aircraftNumber: string
-    ): Promise<KsaPivpPermissionDetailedResponse> {
-        const result = await this.repository.getPermission(number, pilots, date, aircraftNumber);
+    async getPermissionById(id: number): Promise<Permission> {
+        const result = await this.repository.getPermissionById(id);
+        return result;
+    }
 
-        if (!result) {
-            return NOT_FOUND_PERMISSION_RESPONSE;
-        }
-
-        return {
-            result: !!result,
-            details: {
-                permissionNumber: result.permissionNumber,
-                startDate: moment(result.startDate).format(DATE_FORMAT),
-                endDate: moment(result.endDate).format(DATE_FORMAT),
-                target: result.target,
-                airfields: [],
-                aircraftNumbers: [],
-                pilots: [],
-            }
-        };
+    async deletePermissionById(id: number): Promise<boolean> {
+        this.logger.log(`deletePermissionById: ${id}`);
+        const result = await this.repository.deletePermission(id);
+        return result;
     }
 }

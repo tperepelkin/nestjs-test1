@@ -1,4 +1,12 @@
-import { Individual, Airfield as AirfieldModel, Entity as EntityModel, Permission, ActorType, Aircraft as AircraftModel, Airfield, Aircraft } from '@prisma/client';
+import {
+  Individual,
+  Airfield as AirfieldModel,
+  Entity as EntityModel,
+  Permission as PermissionModel,
+  ActorType,
+  Aircraft as AircraftModel,
+  Airfield, AircraftType
+} from '@prisma/client';
 
 export type PilotRequest = Pick<Individual, 'firstName' | 'lastName' | 'patronimyc'>;
 export type PilotShort = Pick<Individual, 'firstName' | 'lastName' | 'patronimyc'>;
@@ -10,29 +18,27 @@ export type AirfieldShort = Pick<AirfieldModel, 'name' | 'code'>;
 export type AircraftShort = Pick<AircraftModel, 'aircraftNumber'>;
 
 export class PermissionRequest {
-    aircraftNumber: string;
-    pilots: PilotRequest[];
-    date: Date;
-    permissionNumber: string
+  aircraftNumber: string;
+  pilot: PilotRequest;
+  date: Date;
+  permissionNumber: string
 }
 
 export type KsaPivpPermissionDetails = {
-  permissionNumber: number;
-  startDate: string;
-  endDate: string;
-  pilots: PilotShort[];
-  aircraftNumbers: string[];
   target: string;
-  airfields: AirfieldShort[];
+  zoneDescription: string | null;
+} | {
+  target: string;
+  airfields: AirfieldShort[] | null;
 }
 
-export type PermissionDetails = Omit<Permission, 'isObsoleted'> & {
+export type PermissionDetails = Omit<PermissionModel, 'isObsoleted'> & {
   recipient: Pilot | Entity
 } & {
   pilots: Pilot[]
 } & {
   aircrafts: AircraftModel[]
-}  & {
+} & {
   airfields: AircraftModel[]
 }
 
@@ -52,51 +58,51 @@ export const NOT_FOUND_PERMISSION_RESPONSE: KsaPivpPermissionDetailedResponse = 
   result: false,
 };
 
-export function isPilot(pilot: any): pilot is PilotShort {
-  if (typeof pilot === 'object') {
-      pilot = (pilot as PilotShort);
-      return pilot.firstName !== undefined
-          && pilot.patronimyc !== undefined
-          && pilot.lastName !== undefined;
-  } else {
-      return false;
-  }
+
+
+export class IndividualDto {
+  id: number;
+  firstName: string;
+  lastName: string;
+  patronimyc: string;
+  passportSeries: string;
+  passportNumber: string;
+  address: string;
+  passportSource: string;
 }
 
-export function isAircraft(aircraft: any): aircraft is AircraftShort {
-  if (typeof aircraft === 'object') {
-      aircraft = (aircraft as AircraftShort);
-      return aircraft.aircraftNumber !== undefined;
-  } else {
-      return false;
-  }
+export class AirfieldDto {
+  id: number
+  code: string | null
+  name: string
+  type: string
+  latitude: number
+  longitude: number
+  militaryZoneId: number | null
+  militaryZoneName: string | null
+  workAboutSchedule: string | null
 }
 
-export function compareItems(
-  item1: PilotShort | Individual | Aircraft | AircraftShort,
-  item2: PilotShort | Individual | Aircraft | AircraftShort
-): boolean {
-  if (isPilot(item1) && isPilot(item2)) {
-      return item1.firstName === item2.firstName
-          && item1.patronimyc === item2.patronimyc
-          && item1.lastName === item2.lastName;
-  }
-
-  if (isAircraft(item1) && isAircraft(item2)) {
-      return item1.aircraftNumber === item2.aircraftNumber;
-
-  }
-
-  throw new TypeError('Wrong parameter types!');
+export class AircraftDto {
+  id: number;
+  modelName: string;
+  aircraftNumber: string;
+  aircraftType: AircraftType;
 }
 
-export function isArrayIncludes<T extends PilotShort | Individual | Aircraft | AircraftShort>(
-  original: Array<T>,
-  included: Array<T>,
-  predicate: (item1: T, item2: T) => boolean
-): boolean {
-  return included.length === original.length
-      && included.every(includedItem =>
-          original.some(originalItem => predicate(includedItem, originalItem))
-      );
+export class PermissionShortDto {
+  id: number;
+  permissionNumber: number | null;
+  recipientId: number;
+  target: string;
+  zoneDescription: string | null;
+  createDate: Date;
+  startDate: Date;
+  endDate: Date | null;
+}
+
+export class PermissionDto extends PermissionShortDto {
+  pilots: Array<IndividualDto>;
+  aircrafts: Array<AircraftDto>;
+  airfields: Array<AirfieldDto>;
 }

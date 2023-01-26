@@ -1,18 +1,26 @@
+import { BadRequestException, Delete, Logger, ParseIntPipe, Post, } from '@nestjs/common';
 import {
     Controller,
     Get,
     Param,
     Body
 } from '@nestjs/common';
-import IAdsbData, { AdsbData } from '../radar-info/dto/adsb-client-data';
-import { RadarInfoService } from '../radar-info/radar-info.service';
 import { NotFoundException } from '@nestjs/common'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
+import { PermissionsService } from './permissions-service';
+import { Permission } from '@prisma/client';
+import { PermissionDto } from './dto/permission'
 
-@Controller('radar')
-export class RadarInfoController {
+type ResultOk = {
+    result: boolean;
+}
+
+@Controller('permissions')
+export class PermissionsController {
+    private readonly logger = new Logger(PermissionsController.name);
+
     constructor(
-        private readonly radarService: RadarInfoService
+        private readonly permissionService: PermissionsService
     ) { }
 
     // async getAdsb(@Body('targetIdent') targetIdent: string): Promise<IAdsbData> {
@@ -23,76 +31,58 @@ export class RadarInfoController {
     //     return result;
     // }
 
-    @ApiExtraModels(AdsbData)
-    @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetIdent, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
-    @ApiResponse({ status: 404, description: 'Когда БВС не найден по заданному targetIdent среди данных от источников ADSB', })
-    @Get('adsb/byIdent/:targetIdent')
-    async getAdsbByTargetIdent(@Param('targetIdent') targetIdent: string): Promise<IAdsbData> {
-        const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
+    // @ApiExtraModels(AdsbData)
+    // @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetIdent, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
+    // @ApiResponse({ status: 404, description: 'Когда БВС не найден по заданному targetIdent среди данных от источников ADSB', })
+    // @Get('adsb/byIdent/:targetIdent')
+    // async getAdsbByTargetIdent(@Param('targetIdent') targetIdent: string): Promise<IAdsbData> {
+    //     const result = await this.radarService.getAdsbByTargetIdent(targetIdent);
+    //     if (!result) {
+    //         throw new NotFoundException(`Adsb with target ident ${targetIdent} was not found`);
+    //     }
+    //     return result;
+    // }
+
+    @ApiResponse({ status: 200, description: 'Возвращает список всех БВС от источников ADSB', schema: { $ref: getSchemaPath(PermissionDto) } })
+    @Get()
+    async getAllPermissions(): Promise<Array<Permission>> {
+        return this.permissionService.getAllPermissions();
+    }
+
+    @ApiResponse({ status: 200, description: 'Возвращает разрешение на полёт по его внутреннему id', schema: { $ref: getSchemaPath(PermissionDto) } })
+    @ApiResponse({ status: 404, description: 'Разрешение не найдено по его внутреннему id', })
+    @Get('/:id')
+    async getPermissionById(@Param('id', ParseIntPipe) id: number): Promise<Permission> {
+        const result = await this.permissionService.getPermissionById(id);
+        this.logger.log('Found', result);
         if (!result) {
-            throw new NotFoundException(`Adsb with target ident ${targetIdent} was not found`);
+            throw new NotFoundException(`Разрешение с id=${id} не существует!`);
         }
         return result;
     }
 
-    @ApiResponse({ status: 200, description: 'Возвращает БВС по его targetAddress, найденный среди данных от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
-    @ApiResponse({ status: 404, description: 'Когда БВС не найден по заданному targetAddress среди данных от источников ADSB', })
-    @Get('adsb/byAddress/:targetAddress')
-    async getAdsbByTargetAddress(@Param('targetAddress') targetAddress: number): Promise<IAdsbData> {
-        const result = this.radarService.getAdsbByTargetAddress(targetAddress);
+
+    // @Post('/create/:id')
+    // @Get('/create/:id')
+    // async addPermissionById(@Param('id', ParseIntPipe) id: number): Promise<Permission> {
+    //     const result = this.permissionService.getPermissionById(id);
+    //     this.logger.log('Found', result);
+    //     if (!result) {
+    //         throw new NotFoundException(`Разрешение с id=${id} не существует!`);
+    //     }
+    //     return result;
+    // }
+
+    @ApiResponse({ status: 200, description: 'Удаляет разрешение на полёт по его внутреннему id', schema: { $ref: getSchemaPath(PermissionDto) } })
+    @ApiResponse({ status: 400, description: 'Разрешение не найдено по его внутреннему id', })
+    // @Delete('/:id')
+    @Get('/delete/:id')
+    async removePermissionById(@Param('id', ParseIntPipe) id: number): Promise<ResultOk> {
+        const result = await this.permissionService.deletePermissionById(id);
         if (!result) {
-            throw new NotFoundException(`Adsb with target address ${targetAddress} was not found`);
+            throw new BadRequestException(`Разрешение с id=${id} не удалено!`);
         }
-        return result;
+        return { result } as ResultOk;
     }
 
-    @ApiResponse({ status: 200, description: 'Возвращает список всех БВС от источников ADSB', schema: { $ref: getSchemaPath(AdsbData) } })
-    @Get('adsb')
-    async getAllAdsb(): Promise<IAdsbData[]> {
-        return this.radarService.getAllAdsb();
-    }
-
-    // @Get('filtered-posts/:searchString')
-    // async getFilteredPosts(
-    //     @Param('searchString') searchString: string,
-    // ): Promise<PostModel[]> {
-    //     return this.postService.posts({
-    //         where: {
-    //             OR: [
-    //                 {
-    //                     title: { contains: searchString },
-    //                 },
-    //                 {
-    //                     content: { contains: searchString },
-    //                 },
-    //             ],
-    //         },
-    //     });
-    // }
-
-    // @Post('post')
-    // async createDraft(@Body() postData: PostData): Promise<PostModel> {
-    //     const { title, content, authorEmail } = postData;
-
-    //     return this.postService.createPost({
-    //         title,
-    //         content,
-    //         author: {
-    //             connect: { email: authorEmail },
-    //         },
-    //     });
-    // }
-
-    // @Put('publish/:id')
-    // async publishPost(@Param('id') id: string): Promise<PostModel> {
-    //     return this.postService.updatePost({
-    //         where: { id: Number(id) },
-    //         data: { published: true },
-    //     });
-    // }
-
-    // @Delete('post/:id')
-    // async removePost(@Param('id') id: string): Promise<PostModel> {
-    //     return this.postService.removePost({ id: Number(id) });
-    // }
 }
