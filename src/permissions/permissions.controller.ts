@@ -1,4 +1,4 @@
-import { BadRequestException, Delete, Logger, ParseIntPipe, Post, } from '@nestjs/common';
+import { BadRequestException, Delete, Header, Logger, ParseIntPipe, Post, Req, Res, } from '@nestjs/common';
 import {
     Controller,
     Get,
@@ -9,11 +9,10 @@ import { NotFoundException } from '@nestjs/common'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
 import { PermissionsService } from './permissions-service';
 import { Permission } from '@prisma/client';
-import { PermissionDto } from './dto/permission'
-
-type ResultOk = {
-    result: boolean;
-}
+import { KsaPivpPermissionDetailedResponse, KsaPivpPermissionRequestDto, KsaPivpPermissionResponse, PermissionDto } from './dto/permission'
+import { SimpleResponse } from 'src/utils';
+import { Response } from 'supertest';
+import getRawBody from 'raw-body';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -51,16 +50,32 @@ export class PermissionsController {
 
     @ApiResponse({ status: 200, description: 'Возвращает разрешение на полёт по его внутреннему id', schema: { $ref: getSchemaPath(PermissionDto) } })
     @ApiResponse({ status: 404, description: 'Разрешение не найдено по его внутреннему id', })
-    @Get('/:id')
+    @Get(':id')
     async getPermissionById(@Param('id', ParseIntPipe) id: number): Promise<Permission> {
         const result = await this.permissionService.getPermissionById(id);
-        this.logger.log('Found', result);
         if (!result) {
             throw new NotFoundException(`Разрешение с id=${id} не существует!`);
         }
         return result;
     }
 
+    @ApiResponse({ status: 200, description: 'Возвращает разрешение на полёт для KCA ПиВП', schema: { $ref: getSchemaPath(PermissionDto) } })
+    @ApiResponse({ status: 404, description: 'Разрешение не найдено', })
+    @Post('/findKsaPivpPermission')
+    async getPermissionByKsaPivpRequest(
+        @Body() ksaPivpRequest: KsaPivpPermissionRequestDto,
+        @Req() request
+    ): Promise<KsaPivpPermissionResponse> {
+        const responseObject = await this.permissionService.checkPermissionByKsaPivpRequest(ksaPivpRequest);
+
+        if (responseObject.result === true) {
+            return responseObject;
+        } else if (responseObject.result === false) {
+            throw new NotFoundException(`Разрешение с критерием=${JSON.stringify(ksaPivpRequest)} не существует!`);
+        }
+
+        throw new BadRequestException(`Ошибка при поиске разрешения с критерием=${JSON.stringify(ksaPivpRequest)}`);
+    }
 
     // @Post('/create/:id')
     // @Get('/create/:id')
@@ -74,15 +89,30 @@ export class PermissionsController {
     // }
 
     @ApiResponse({ status: 200, description: 'Удаляет разрешение на полёт по его внутреннему id', schema: { $ref: getSchemaPath(PermissionDto) } })
-    @ApiResponse({ status: 400, description: 'Разрешение не найдено по его внутреннему id', })
-    // @Delete('/:id')
-    @Get('/delete/:id')
-    async removePermissionById(@Param('id', ParseIntPipe) id: number): Promise<ResultOk> {
-        const result = await this.permissionService.deletePermissionById(id);
-        if (!result) {
-            throw new BadRequestException(`Разрешение с id=${id} не удалено!`);
-        }
-        return { result } as ResultOk;
-    }
+    @ApiResponse({ status: 400, description: 'Ошибка при удалении разрешения', })
+    @ApiResponse({ status: 404, description: 'Разрешение не найдено по его внутреннему id', })
+    @Delete(':id')
+    @Get('delete/:id')
+    @Header('Content-Type', 'application/json')
+    async removePermissionById(
+        @Param('id', ParseIntPipe) id: number
+    ): Promise<SimpleResponse> {
+        let result: boolean | undefined;
 
+        try {
+            result = await this.permissionService.deletePermissionById(id);
+        } catch (e) {
+            this.logger.error(`Ошибка при удалении разрешения с id=${id}! Exception: ${e}`);
+            throw new BadRequestException(`Ошибка при удалении разрешения с id=${id}!`);
+        }
+
+        if (result === undefined) {
+            this.logger.error(`Разрешение с id=${id} не существует!`);
+            throw new NotFoundException(`Разрешение с id=${id} не существует!`);
+        } else if (result === false) {
+            throw new BadRequestException(`Ошибка при удалении разрешения с id=${id}!`);
+        }
+
+        return { result: !!result } as SimpleResponse;
+    }
 }

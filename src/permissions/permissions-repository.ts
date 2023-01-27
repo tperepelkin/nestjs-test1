@@ -1,7 +1,7 @@
-import { Logger, Injectable } from '@nestjs/common';
+import { Logger, Injectable, BadRequestException } from '@nestjs/common';
 import { Actor, Aircraft, Airfield, Individual, Permission } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { AircraftShort, PilotShort } from './dto/permission';
+import { AircraftShort, PermissionWithAirfieldsModel, PilotShort } from './dto/permission';
 import { compareItems, isAircraft, isArrayIncludes } from './utils';
 
 @Injectable()
@@ -40,9 +40,7 @@ export class PermissionsRepository {
         , pilot: PilotShort | Individual
         , date: Date
         , aircraftNumber: string | AircraftShort | Aircraft
-    ): Promise<Array<Permission & {
-        pilots?: Array<Individual>
-    }>> {
+    ): Promise<Array<PermissionWithAirfieldsModel>> {
         let result: Array<Permission>;
         let clarifiedAircraftNumber: string;
 
@@ -51,7 +49,7 @@ export class PermissionsRepository {
         } else if (isAircraft(aircraftNumber)) {
             clarifiedAircraftNumber = aircraftNumber.aircraftNumber;
         } else {
-            throw new TypeError('Wrong type of aurcrafyNumber parameter!');
+            throw new BadRequestException(`Wrong type of aircraftNumber parameter! Value:${aircraftNumber}!`);
         }
 
         const where = {
@@ -75,8 +73,7 @@ export class PermissionsRepository {
                 },
             },
         }, include = {
-            pilots: true,
-            aircrafts: true,
+            airfields: true,
         };
 
         // Разрешение c номером ?
@@ -123,13 +120,27 @@ export class PermissionsRepository {
 
     async deletePermission(
         id: number
-    ): Promise<boolean> {
-        const result = await this.prisma.permission.delete({
+    ): Promise<boolean | undefined> {
+        // Воркэраунд. Prisma в текущих версиях кидает ошибку при попытке удалить строку с несуществующим уникальным id
+        const isExists = await this.prisma.permission.count({
             where: {
                 id,
-            },
-        });
-        return !!result;
+            }
+        }) > 0;
+        console.log('PermissionsRepository, isExists', isExists);
+        if (!isExists) {
+            console.log('PermissionsRepository, do not perform delete');
+            return undefined;
+        } else {
+            return await this.prisma.$transaction(async (tx) => {
+                const result = await tx.permission.delete({
+                    where: {
+                        id,
+                    },
+                });
+                return !!result;
+            });
+        }
     }
 
     async addPermission(

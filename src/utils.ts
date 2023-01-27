@@ -1,12 +1,14 @@
 import { False, True } from 'prisma';
 
+export const DATE_FORMAT = 'DD.MM.YYYY kk:mm';
+
 export type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 
 export type XOR<T, U> =
     T extends object ?
     U extends object ?
     (Without<T, U> & U) | (Without<U, T> & T)
-    : U : T
+    : U : T;
 
 export type IsObject<T extends any> = T extends Array<any>
     ? False
@@ -18,4 +20,8 @@ export type IsObject<T extends any> = T extends Array<any>
     ? False
     : T extends object
     ? True
-    : False
+    : False;
+
+export type SimpleResponse = {
+    result: boolean;
+}

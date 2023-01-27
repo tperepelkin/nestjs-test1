@@ -3,34 +3,59 @@ import {
   Airfield as AirfieldModel,
   Entity as EntityModel,
   Permission as PermissionModel,
-  ActorType,
   Aircraft as AircraftModel,
-  Airfield, AircraftType
+  AircraftType
 } from '@prisma/client';
+
 
 export type PilotRequest = Pick<Individual, 'firstName' | 'lastName' | 'patronimyc'>;
 export type PilotShort = Pick<Individual, 'firstName' | 'lastName' | 'patronimyc'>;
 type Pilot = Individual;
 type Entity = EntityModel;
 
-export type AirfieldShort = Pick<AirfieldModel, 'name' | 'code'>;
+export type AirfieldShort = Pick<AirfieldModel, 'name' | 'code'> & {
+  location?: {
+    type: string;
+    geometry: {
+      type: string;
+      coordinates: Array<number>;
+    },
+    porperties?: {
+      [key: string]: string | number | boolean;
+    }
+  }
+};
 
 export type AircraftShort = Pick<AircraftModel, 'aircraftNumber'>;
 
-export class PermissionRequest {
+export type PermissionWithAirfieldsModel = PermissionModel & {
+  airfields?: Array<AirfieldModel>
+};
+
+export type PermissionShortResponse = {
+  result: boolean;
+}
+
+export class KsaPivpPermissionRequestDto {
   aircraftNumber: string;
-  pilot: PilotRequest;
-  date: Date;
-  permissionNumber: string
+  pilot?: PilotRequest;
+  date?: Date;
+  permissionNumber?: number;
 }
 
 export type KsaPivpPermissionDetails = {
   target: string;
-  zoneDescription: string | null;
+  zoneDescription: string;
 } | {
   target: string;
-  airfields: AirfieldShort[] | null;
+  airfields: AirfieldShort[];
 }
+
+export type KsaPivpPermissionDetailedResponse = PermissionShortResponse & {
+  details?: KsaPivpPermissionDetails | Array<KsaPivpPermissionDetails>;
+}
+
+export type KsaPivpPermissionResponse = PermissionShortResponse | KsaPivpPermissionDetailedResponse
 
 export type PermissionDetails = Omit<PermissionModel, 'isObsoleted'> & {
   recipient: Pilot | Entity
@@ -42,17 +67,7 @@ export type PermissionDetails = Omit<PermissionModel, 'isObsoleted'> & {
   airfields: AircraftModel[]
 }
 
-export type PermissionShortResponse = {
-  result: boolean;
-}
 
-export type KsaPivpPermissionDetailedResponse = PermissionShortResponse & {
-  details?: KsaPivpPermissionDetails;
-}
-
-export type PermissionDetailedResponse = PermissionShortResponse & {
-  details?: PermissionDetails;
-}
 
 export const NOT_FOUND_PERMISSION_RESPONSE: KsaPivpPermissionDetailedResponse = {
   result: false,
